@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Frise des savants</title>
+<style>
+  :root{
+    --parchment: #F1E9D8;
+    --parchment-deep: #E8DCC4;
+    --ink: #1B2A41;
+    --ink-soft: #3E4C5E;
+    --gold: #A8823C;
+    --gold-soft: #CBAA6E;
+    --rust: #A34A38;
+    --green: #4C6444;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin:0;
+    background: var(--parchment);
+    color: var(--ink);
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    padding: 20px 14px 60px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  @media (min-width: 768px) { .wrap { max-width: 960px; } }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+    gap: 12px;
+  }
+  h1 {
+    font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
+    font-weight: 700;
+    font-size: 26px;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  .subtitle { font-size: 13px; color: var(--ink-soft); margin: 0; }
+
+  .sync-btn {
+    flex-shrink: 0;
+    font-size: 13px;
+    padding: 8px 12px;
+    background: none;
+    border: 1px solid rgba(27,42,65,0.25);
+    border-radius: 3px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .sync-btn.connected { border-color: var(--green); color: var(--green); }
+  .sync-btn.error { border-color: var(--rust); color: var(--rust); }
+
+  .banner {
+    background: var(--parchment-deep);
+    border: 1px solid var(--rust);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 18px;
+    color: var(--ink-soft);
+  }
+
+  .form-card {
+    background: var(--parchment-deep);
+    border: 1px solid rgba(27,42,65,0.12);
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 28px;
+  }
+  .form-row { display:flex; gap:8px; margin-bottom:8px; flex-wrap: wrap; }
+  .form-row input, .form-row select {
+    font-family: inherit;
+    font-size: 16px;
+    padding: 11px 10px;
+    border: 1px solid rgba(27,42,65,0.25);
+    border-radius: 3px;
+    background: var(--parchment);
+    color: var(--ink);
+  }
+  .form-row input:focus, .form-row select:focus { outline: none; border-color: var(--gold); }
+  input.name { flex: 1 1 200px; min-width: 160px; }
+  input.year { width: 100px; }
+  select.calendar { width: 130px; flex: 1 1 120px; }
+  input.note { flex: 1 1 100%; }
+  .add-btn {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 11px 20px;
+    background: var(--ink);
+    color: var(--parchment);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 100%;
+  }
+  @media (min-width: 480px) { .add-btn { width: auto; } }
+  .add-btn:hover { background: var(--ink-soft); }
+  .hint { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+
+  .zoom-bar { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-bottom: 10px; }
+  .zoom-btn {
+    width: 30px; height: 30px; font-size: 16px; line-height: 1;
+    background: var(--parchment-deep);
+    border: 1px solid rgba(27,42,65,0.25);
+    border-radius: 3px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .zoom-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .zoom-btn:disabled { opacity: 0.35; cursor: default; }
+  .zoom-level { font-size: 12px; color: var(--ink-soft); min-width: 38px; text-align: center; }
+
+  #content { zoom: var(--zoom, 1); }
+
+  .timeline { position: relative; padding-left: 22px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px;
+    width: 1px; background: var(--gold-soft);
+  }
+  .century-block:first-child .century-label { margin-top: 0; }
+  .century-label {
+    font-family: Georgia, 'Palatino Linotype', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--gold);
+    margin: 26px 0 10px;
+  }
+
+  .entry { position: relative; padding: 11px 0 11px 18px; border-bottom: 1px solid rgba(27,42,65,0.08); }
+  .entry::before {
+    content: ""; position: absolute; left: -22px; top: 18px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--gold);
+  }
+  .entry-top { display:flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .entry-name { font-family: Georgia, 'Palatino Linotype', serif; font-weight: 700; font-size: 17px; }
+  .entry-year { font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+  .entry-note { font-size: 13px; color: var(--ink-soft); margin-top: 3px; line-height: 1.4; }
+  .del-btn {
+    background: none; border: none; color: var(--rust); font-size: 12px;
+    cursor: pointer; padding: 4px; opacity: 0.55;
+  }
+  .del-btn:hover { opacity: 1; }
+
+  /* Tablette et ordinateur : frise horizontale, un bloc par siècle, défilement latéral si besoin. */
+  @media (min-width: 768px) {
+    .timeline {
+      display: flex;
+      align-items: flex-start;
+      padding-left: 0;
+      padding-top: 16px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .timeline::before { content: none; }
+
+    .century-block {
+      position: relative;
+      flex: 0 0 auto;
+      width: 220px;
+      padding: 0 18px;
+      border-left: 1px solid var(--gold-soft);
+    }
+    .century-block:first-child { border-left: none; }
+    .century-block::before {
+      content: ""; position: absolute; left: -4px; top: -13px;
+      width: 7px; height: 7px; border-radius: 50%; background: var(--gold);
+    }
+    .century-block:first-child::before { left: 0; }
+    .century-block:first-child .century-label,
+    .century-label { margin: 0 0 14px; white-space: nowrap; }
+
+    .entry { padding: 9px 0 9px 0; }
+    .entry::before { content: none; }
+    .entry:last-child { border-bottom: none; }
+  }
+
+  .empty { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 30px 0; }
+  .loading { text-align:center; color: var(--ink-soft); font-size: 14px; padding: 20px 0; }
+
+  footer { margin-top: 30px; text-align: center; }
+  .reset-link {
+    font-size: 12px; color: var(--ink-soft); background: none; border: none;
+    text-decoration: underline; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Frise des savants</h1>
+      <p class="subtitle">Classés par date de décès — s'ajuste automatiquement.</p>
+    </div>
+    <button class="sync-btn" id="syncBtn" title="Forcer la synchronisation">Synchronisation</button>
+  </header>
+
+  <div class="banner" id="errorBanner" style="display:none;"></div>
+
+  <div class="form-card">
+    <div class="form-row">
+      <input class="name" id="inpName" type="text" placeholder="Nom du savant" />
+      <input class="year" id="inpYear" type="number" inputmode="numeric" placeholder="Année" />
+      <select class="calendar" id="inpCal">
+        <option value="AH">Hégire (h.)</option>
+        <option value="AD">Grégorien</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <input class="note" id="inpNote" type="text" placeholder="Note (spécialité, ouvrage...) — optionnel" />
+    </div>
+    <button class="add-btn" id="btnAdd">Ajouter</button>
+    <div class="hint">La conversion hégire → grégorien est approximative, utilisée seulement pour le tri.</div>
+  </div>
+
+  <div class="zoom-bar">
+    <button class="zoom-btn" id="zoomOut" aria-label="Dézoomer">−</button>
+    <span class="zoom-level" id="zoomLevel">100%</span>
+    <button class="zoom-btn" id="zoomIn" aria-label="Zoomer">+</button>
+  </div>
+
+  <div id="content"><div class="loading">Chargement…</div></div>
+
+  <footer><button class="reset-link" id="btnReset">Tout effacer</button></footer>
+</div>
+
+<script>
+const LOCAL_KEY = 'scholars-list';
+
+// ⚠️ Jeton en dur : voir README.md pour les implications de sécurité
+// (l'URL du site déployé ne doit jamais être partagée publiquement).
+const CONFIG = {
+  owner: 'kmadou019',
+  repo: 'frise',
+  path: 'data/scholars.json',
+  branch: 'main',
+  token: 'REMPLACE_PAR_TON_TOKEN_GITHUB_ICI'
+};
+
+let scholars = [];
+let fileSha = null;
+const syncEnabled = CONFIG.token && CONFIG.token !== 'REMPLACE_PAR_TON_TOKEN_GITHUB_ICI';
+
+function hijriToGregorian(ah) { return Math.round(ah + 622 - (ah / 33)); }
+
+function centuryLabel(adYear) {
+  const c = Math.floor((adYear - 1) / 100) + 1;
+  return toRoman(c) + 'e siècle';
+}
+function toRoman(num) {
+  const vals = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+  let res = '';
+  for (const [v, s] of vals) { while (num >= v) { res += s; num -= v; } }
+  return res;
+}
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+const ZOOM_KEY = 'frise-zoom';
+const ZOOM_MIN = 0.7;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.15;
+let zoom = parseFloat(localStorage.getItem(ZOOM_KEY)) || 1;
+
+function applyZoom() {
+  document.getElementById('content').style.setProperty('--zoom', zoom);
+  document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+  document.getElementById('zoomOut').disabled = zoom <= ZOOM_MIN;
+  document.getElementById('zoomIn').disabled = zoom >= ZOOM_MAX;
+  localStorage.setItem(ZOOM_KEY, zoom);
+}
+function zoomBy(delta) {
+  zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(zoom + delta).toFixed(2)));
+  applyZoom();
+}
+
+function b64EncodeUnicode(str) {
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1)));
+}
+function b64DecodeUnicode(str) {
+  return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    scholars = raw ? JSON.parse(raw) : [];
+  } catch (e) { scholars = []; }
+}
+function saveLocal() {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(scholars));
+}
+
+function setSyncStatus(state, text) {
+  const btn = document.getElementById('syncBtn');
+  btn.classList.remove('connected', 'error');
+  if (state) btn.classList.add(state);
+  btn.textContent = text;
+}
+
+function contentsUrl() {
+  return `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
+}
+
+async function fetchFromRepo() {
+  const res = await fetch(`${contentsUrl()}?ref=${CONFIG.branch}`, {
+    headers: { 'Authorization': `token ${CONFIG.token}`, 'Accept': 'application/vnd.github+json' }
+  });
+  if (res.status === 404) { fileSha = null; return []; }
+  if (!res.ok) throw new Error('Lecture impossible (' + res.status + ')');
+  const data = await res.json();
+  fileSha = data.sha;
+  return JSON.parse(b64DecodeUnicode(data.content.replace(/\n/g, '')));
+}
+
+async function putToRepo(sha) {
+  const body = {
+    message: 'Mise à jour de la frise des savants',
+    content: b64EncodeUnicode(JSON.stringify(scholars, null, 2)),
+    branch: CONFIG.branch
+  };
+  if (sha) body.sha = sha;
+  return fetch(contentsUrl(), {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${CONFIG.token}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+async function pushToRepo() {
+  let res = await putToRepo(fileSha);
+  if (res.status === 409) {
+    // Le fichier a changé ailleurs entre-temps : on relit le sha courant puis on réessaie une fois.
+    await fetchFromRepo();
+    res = await putToRepo(fileSha);
+  }
+  if (!res.ok) throw new Error('Écriture impossible (' + res.status + ')');
+  const data = await res.json();
+  fileSha = data.content.sha;
+}
+
+function showError(msg) {
+  const banner = document.getElementById('errorBanner');
+  if (msg) { banner.textContent = msg; banner.style.display = 'block'; }
+  else { banner.style.display = 'none'; }
+}
+
+async function syncPull() {
+  if (!syncEnabled) { setSyncStatus(null, 'Sync désactivée'); return; }
+  try {
+    setSyncStatus(null, 'Synchronisation…');
+    const remote = await fetchFromRepo();
+    scholars = remote;
+    saveLocal();
+    setSyncStatus('connected', 'Synchronisé ✓');
+    showError(null);
+  } catch (e) {
+    setSyncStatus('error', 'Erreur de sync');
+    showError('Erreur de synchronisation : ' + e.message);
+  }
+  render();
+}
+
+async function syncPush() {
+  if (!syncEnabled) return;
+  try {
+    await pushToRepo();
+    setSyncStatus('connected', 'Synchronisé ✓');
+    showError(null);
+  } catch (e) {
+    setSyncStatus('error', 'Erreur de sync');
+    showError('Erreur de synchronisation : ' + e.message);
+  }
+}
+
+function addScholar() {
+  const name = document.getElementById('inpName').value.trim();
+  const yearRaw = document.getElementById('inpYear').value;
+  const cal = document.getElementById('inpCal').value;
+  const note = document.getElementById('inpNote').value.trim();
+  if (!name || !yearRaw) return;
+
+  const enteredYear = parseInt(yearRaw, 10);
+  const sortYear = cal === 'AH' ? hijriToGregorian(enteredYear) : enteredYear;
+
+  scholars.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name, note, enteredYear, cal, sortYear
+  });
+
+  document.getElementById('inpName').value = '';
+  document.getElementById('inpYear').value = '';
+  document.getElementById('inpNote').value = '';
+  document.getElementById('inpName').focus();
+
+  saveLocal();
+  render();
+  syncPush();
+}
+
+function deleteScholar(id) {
+  scholars = scholars.filter(s => s.id !== id);
+  saveLocal();
+  render();
+  syncPush();
+}
+
+async function resetAll() {
+  if (!confirm('Effacer toute la liste ?')) return;
+  scholars = [];
+  saveLocal();
+  render();
+  await syncPush();
+}
+
+function render() {
+  const content = document.getElementById('content');
+
+  if (scholars.length === 0) {
+    content.innerHTML = '<div class="empty">Aucun savant pour l\'instant. Ajoutez-en un ci-dessus.</div>';
+    return;
+  }
+  const sorted = [...scholars].sort((a, b) => a.sortYear - b.sortYear);
+  let html = '<div class="timeline">';
+  let lastCentury = null;
+  for (const s of sorted) {
+    const century = centuryLabel(s.sortYear);
+    if (century !== lastCentury) {
+      if (lastCentury !== null) html += '</div>';
+      html += `<div class="century-block"><div class="century-label">${century}</div>`;
+      lastCentury = century;
+    }
+    const yearDisplay = s.cal === 'AH' ? `m. ${s.enteredYear} h.` : `m. ${s.enteredYear}`;
+    html += `
+      <div class="entry">
+        <div class="entry-top">
+          <span class="entry-name">${escapeHtml(s.name)}</span>
+          <span class="entry-year">${yearDisplay} <button class="del-btn" onclick="deleteScholar('${s.id}')">retirer</button></span>
+        </div>
+        ${s.note ? `<div class="entry-note">${escapeHtml(s.note)}</div>` : ''}
+      </div>`;
+  }
+  if (lastCentury !== null) html += '</div>';
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+document.getElementById('syncBtn').addEventListener('click', syncPull);
+
+document.getElementById('btnAdd').addEventListener('click', addScholar);
+document.getElementById('btnReset').addEventListener('click', resetAll);
+document.getElementById('inpNote').addEventListener('keydown', e => { if (e.key === 'Enter') addScholar(); });
+document.getElementById('inpYear').addEventListener('keydown', e => { if (e.key === 'Enter') addScholar(); });
+document.getElementById('zoomIn').addEventListener('click', () => zoomBy(ZOOM_STEP));
+document.getElementById('zoomOut').addEventListener('click', () => zoomBy(-ZOOM_STEP));
+
+applyZoom();
+loadLocal();
+render();
+if (syncEnabled) {
+  syncPull();
+} else {
+  setSyncStatus('error', 'Sync désactivée');
+  showError('Aucun jeton configuré : voir README.md pour activer la synchronisation automatique.');
+}
+</script>
+</body>
+</html>
