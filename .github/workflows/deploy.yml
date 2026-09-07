@@ -1,0 +1,53 @@
+name: Déploiement GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/scholars.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Injecter le jeton de synchronisation
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          mkdir -p dist
+          cp index.html dist/index.html
+          python3 - <<'PY'
+          import os
+          path = "dist/index.html"
+          with open(path, "r", encoding="utf-8") as f:
+              content = f.read()
+          token = os.environ["SYNC_TOKEN"]
+          content = content.replace("REMPLACE_PAR_TON_TOKEN_GITHUB_ICI", token)
+          with open(path, "w", encoding="utf-8") as f:
+              f.write(content)
+          PY
+
+      - name: Préparer l'artefact Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Déployer
+        id: deployment
+        uses: actions/deploy-pages@v4

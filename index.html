@@ -234,8 +234,10 @@
 <script>
 const LOCAL_KEY = 'scholars-list';
 
-// ⚠️ Jeton en dur : voir README.md pour les implications de sécurité
-// (l'URL du site déployé ne doit jamais être partagée publiquement).
+// Le jeton n'est jamais commité : le workflow GitHub Actions l'injecte ici
+// au moment du déploiement, à partir du secret de dépôt SYNC_TOKEN.
+// (voir README.md pour la configuration et les implications de sécurité —
+// l'URL du site déployé ne doit jamais être partagée publiquement).
 const CONFIG = {
   owner: 'kmadou019',
   repo: 'frise',
@@ -246,7 +248,10 @@ const CONFIG = {
 
 let scholars = [];
 let fileSha = null;
-const syncEnabled = CONFIG.token && CONFIG.token !== 'REMPLACE_PAR_TON_TOKEN_GITHUB_ICI';
+// Détection par forme du jeton (préfixe GitHub) plutôt que par comparaison au
+// texte du placeholder : celui-ci apparaît deux fois dans ce fichier, et une
+// substitution en CI qui remplacerait les deux occurrences casserait ce test.
+const syncEnabled = /^(ghp_|github_pat_)/.test(CONFIG.token);
 
 function hijriToGregorian(ah) { return Math.round(ah + 622 - (ah / 33)); }
 
